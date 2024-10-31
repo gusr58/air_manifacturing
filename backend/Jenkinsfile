@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_HUB_CREDENTIALS = credentials('baykar')
+    }
+
+    stages {
+
+        stage('Build image') {
+            steps {
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'baykar-front', url: 'https://github.com/baykar/baykar-backend.git']])
+                script {
+                    sh '''
+                    docker build -t baykar34/baykar_backend:3 .
+                    '''
+                }
+            }
+        }    
+        
+         
+    
+        stage('Push') {
+            steps {
+                script {
+                    sh ''' 
+                    echo $DOCKER_HUB_CREDENTIALS_PSW | docker login -u baykar34 --password-stdin
+                    docker push baykar34/baykar_backend:3
+                    '''
+                }    
+           }
+        } 
+
+        stage('Run Docker Compose') {
+            steps {
+                script {
+                    sh '''
+                    cd /var/tmp/demo-baykar-deploy
+                    docker-compose up -d
+                    '''
+                }
+            }
+        }
+    }
+           
+    post {
+        always {
+            sh 'docker logout'
+        }
+    }
+}  

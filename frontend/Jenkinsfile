@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_HUB_CREDENTIALS = credentials('gogojr')
+    }
+
+    stages {
+
+        stage('Build image') {
+            steps {
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'baykar-front', url: 'https://github.com/baykarmedya/baykarmedya-frontend.git']])              
+                script {
+                    sh '''
+                    docker build -t gogojr/baykar_frontend:2 .
+                    '''
+                }
+            }
+        }    
+         
+    
+        stage('Push') {
+            steps {
+                sh ''' 
+                echo $DOCKER_HUB_CREDENTIALS_PSW | docker login -u gogojr34 --password-stdin
+                docker push gogojr/baykar_frontend:2
+                '''
+            }    
+        }
+
+        stage('Run Docker Compose') {
+            steps {
+                sh '''
+                cd /var/tmp/demo-baykar-deploy/
+                docker-compose up -d
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker logout'
+        }
+    } 
+}   
+
